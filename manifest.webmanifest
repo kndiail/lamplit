@@ -1,0 +1,16 @@
+{
+  "name": "提灯者 · LAMPLIT",
+  "short_name": "提灯者",
+  "description": "像素风地牢动作游戏：4 层 6 关、12 位层主、纵版音游",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05060c",
+  "theme_color": "#0a0d16",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

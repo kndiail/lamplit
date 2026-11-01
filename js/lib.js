@@ -54,7 +54,10 @@
     keys: Object.create(null),
     pressed: Object.create(null),
     mouse: { x: 240, y: 135, down: false, clicked: false, mx: 0, my: 0 },
-    touch: { active: false, x: 0, y: 0, dx: 0, dy: 0 },
+    touch: { active: false, id: null, x: 0, y: 0, ox: 0, oy: 0, dx: 0, dy: 0 },
+    btn: { dash: false, skill: false, pause: false },
+    taps: [],
+    touchMode: false,
     anyKey: false,
 
     init(canvas) {
@@ -91,27 +94,57 @@
       window.addEventListener('mouseup', () => { this.mouse.down = false; });
       canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-      // 触屏：左侧虚拟摇杆
+      // 触屏：左半屏虚拟摇杆 + 右侧冲刺/灯爆/暂停
+      const W = canvas.width, H = canvas.height;
+      const inCircle = (x, y, cx, cy, r) => {
+        const dx = x - cx, dy = y - cy;
+        return dx * dx + dy * dy <= r * r;
+      };
       canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const t = e.changedTouches[0];
-        const p = toCanvas(t.clientX, t.clientY);
-        this.touch.active = true;
-        this.touch.ox = p.x; this.touch.oy = p.y;
-        this.touch.x = p.x; this.touch.y = p.y;
-        this.mouse.clicked = true;
-        this.mouse.x = p.x; this.mouse.y = p.y;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          const p = toCanvas(t.clientX, t.clientY);
+          this.touchMode = true;
+          this.anyKey = true;
+          this.taps.push({ x: p.x, y: p.y });
+          this.mouse.x = p.x; this.mouse.y = p.y;
+          this.mouse.clicked = true;
+          if (inCircle(p.x, p.y, W - 36, H - 54, 25)) { this.btn.dash = true; continue; }
+          if (inCircle(p.x, p.y, W - 86, H - 64, 25)) { this.btn.skill = true; continue; }
+          if (inCircle(p.x, p.y, 16, 36, 17)) { this.btn.pause = true; continue; }
+          if (p.x < W * 0.5 && !this.touch.active) {
+            this.touch.active = true;
+            this.touch.id = t.identifier;
+            this.touch.ox = p.x; this.touch.oy = p.y;
+            this.touch.x = p.x; this.touch.y = p.y;
+            this.touch.dx = 0; this.touch.dy = 0;
+          }
+        }
       }, { passive: false });
       canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        const t = e.changedTouches[0];
-        const p = toCanvas(t.clientX, t.clientY);
-        this.touch.x = p.x; this.touch.y = p.y;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier !== this.touch.id) continue;
+          const p = toCanvas(t.clientX, t.clientY);
+          this.touch.x = p.x; this.touch.y = p.y;
+          this.touch.dx = p.x - this.touch.ox;
+          this.touch.dy = p.y - this.touch.oy;
+        }
       }, { passive: false });
-      canvas.addEventListener('touchend', (e) => {
+      const endTouch = (e) => {
         e.preventDefault();
-        this.touch.active = false;
-      }, { passive: false });
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === this.touch.id) {
+            this.touch.active = false;
+            this.touch.id = null;
+            this.touch.dx = 0; this.touch.dy = 0;
+          }
+        }
+      };
+      canvas.addEventListener('touchend', endTouch, { passive: false });
+      canvas.addEventListener('touchcancel', endTouch, { passive: false });
     },
 
     down(...keys) { return keys.some((k) => !!this.keys[k]); },
@@ -136,6 +169,10 @@
       this.pressed = Object.create(null);
       this.mouse.clicked = false;
       this.anyKey = false;
+      this.btn.dash = false;
+      this.btn.skill = false;
+      this.btn.pause = false;
+      this.taps.length = 0;
     },
   };
 

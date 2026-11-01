@@ -13,6 +13,8 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #05060c;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 body {
@@ -31,6 +33,7 @@ body {
 
 #stage {
   position: relative;
+  touch-action: none;
   line-height: 0;
   box-shadow:
     0 0 0 2px #171b2b,

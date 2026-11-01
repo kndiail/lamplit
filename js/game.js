@@ -1580,7 +1580,7 @@
 
     // 主动技能：灯爆
     P.skill.cd = Math.max(0, P.skill.cd - dt);
-    if (Input.hit('e') && P.skill.cd <= 0) castSkill();
+    if ((Input.hit('e') || Input.btn.skill) && P.skill.cd <= 0) castSkill();
 
     // 圣物：落雷
     if (P.st.relicThunder) {
@@ -1610,7 +1610,7 @@
     // 冲刺
     P.dashCd = Math.max(0, P.dashCd - dt);
     // 冲刺只保留 Shift / K：空格用于确认与跳过，E 是灯爆
-    if ((Input.hit('shift') || Input.hit('k')) && P.dashCd <= 0 && (dx || dy)) {
+    if ((Input.hit('shift') || Input.hit('k') || Input.btn.dash) && P.dashCd <= 0 && (dx || dy)) {
       P.dashT = 0.17;
       P.dashCd = 1.55;
       const l = Math.hypot(dx, dy) || 1;
@@ -3136,6 +3136,7 @@
     }
 
     if (state === 'PLAY' || state === 'LEVELUP' || state === 'PAUSE' || state === 'CHEST' || state === 'BOON' || state === 'SHRINE') drawHUD();
+    if (state === 'PLAY') drawTouchControls();
     if ((state === 'PLAY' || state === 'PAUSE') && !cine) drawStoryQuote();
     if (!cine && (state === 'PLAY' || state === 'LEVELUP' || state === 'PAUSE' || state === 'CHEST')) drawBanner();
 
@@ -3869,6 +3870,52 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawTouchControls() {
+    if (!Input.touchMode) return;
+    const jx = Input.touch.active ? Input.touch.ox : 52;
+    const jy = Input.touch.active ? Input.touch.oy : H - 58;
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = '#0a1420';
+    ctx.beginPath(); ctx.arc(jx, jy, 25, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(jx, jy, 25, 0, TAU); ctx.stroke();
+    let kx = jx, ky = jy;
+    if (Input.touch.active) {
+      const dx = Input.touch.x - Input.touch.ox;
+      const dy = Input.touch.y - Input.touch.oy;
+      const l = Math.hypot(dx, dy) || 1;
+      const cl = Math.min(l, 20);
+      kx = jx + dx / l * cl;
+      ky = jy + dy / l * cl;
+    }
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#9fe8ff';
+    ctx.beginPath(); ctx.arc(kx, ky, 7, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    const tbtn = (cx, cy, label, ratio, ready) => {
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = ready ? '#9fe8ff' : '#4a5a72';
+      ctx.beginPath(); ctx.arc(cx, cy, 18, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = ready ? '#d8f4ff' : '#6f7d9a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, 18, -Math.PI / 2, -Math.PI / 2 + TAU * ratio); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ART.text(ctx, label, cx, cy - 5, { color: ready ? '#eaf8ff' : '#8fa6c9', align: 'center' });
+    };
+    tbtn(W - 36, H - 54, '冲', clamp(1 - P.dashCd / 1.55, 0, 1), P.dashCd <= 0);
+    tbtn(W - 86, H - 64, '灯', clamp(1 - P.skill.cd / P.skill.max, 0, 1), P.skill.cd <= 0);
+
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = '#8fa6c9';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(16, 36, 12, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ART.text(ctx, 'II', 16, 30, { color: '#8fa6c9', align: 'center' });
+  }
+
   function drawHUD() {
     if (cine) return;
     const ch = CHARS[P.charId];
@@ -3910,7 +3957,8 @@
     // 神器（单槽）
     if (P.relics[0]) {
       const rel = RELICS[P.relics[0]];
-      const rlx = W - 22, rly = H - 40;
+      const rlx = Input.touchMode ? 10 : W - 22;
+      const rly = Input.touchMode ? 42 : H - 40;
       ctx.drawImage(SPR.icons[rel.icon], rlx, rly);
       for (let k = 0; k < 3; k++) px(rlx + k * 3, rly + 13, 2, 2, k < (P.relicLvl || 1) ? '#ffd166' : '#20263a');
       if (P.relicStore && P.relicStore.length) {
@@ -4844,7 +4892,7 @@
         AUDIO.sfx('click');
         return;
       }
-      if (Input.hit('escape')) { state = 'PAUSE'; AUDIO.sfx('click'); }
+      if (Input.hit('escape') || Input.btn.pause) { state = 'PAUSE'; AUDIO.sfx('click'); }
       return;
     }
 

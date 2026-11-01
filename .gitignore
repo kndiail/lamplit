@@ -3,3 +3,7 @@ dist/
 node_modules/
 *.log
 __pycache__/
+android/app/src/main/assets/www/
+android/.gradle/
+android/build/
+android/app/build/

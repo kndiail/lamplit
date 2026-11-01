@@ -22,6 +22,14 @@
 - 关闭浏览器不会退出程序：在任务栏托盘图标右键 → 退出；托盘里也有「重置存档并重开」
 - 重新打包：`python tools/build_exe.py`（用系统自带 csc.exe，无需联网）
 
+## 手机 / Android
+
+- **PWA（最快）**：用 Chrome 打开游戏地址 → 菜单「添加到主屏幕」，即可以全屏横屏、离线运行
+- **APK**：先 `python tools/sync_android.py` 同步网页资源，再用 Android Studio 打开 `android/` 构建
+  （本机已有 Android SDK；需安装 JDK 17）
+- 触屏操作：左半屏虚拟摇杆、右下「冲 / 灯」按钮、左上暂停；音游四轨可直接点击轨道击打
+- PWA 入口：`manifest.webmanifest`、`sw.js`（离线缓存）
+
 ## 立刻开玩
 
 ```bash

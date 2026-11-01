@@ -30,6 +30,7 @@
   R.hitT = 0;
   R.perfectRatio = 0;
   R.acc = 1;
+  R.geo = null;
 
   R.start = function (seed) {
     const rnd = G.rng((seed | 0) ^ 0x5eed);
@@ -86,6 +87,18 @@
     R.hitT = Math.max(0, R.hitT - dt);
     const inp = window.G.Input;
     for (let i = 0; i < LANES; i++) if (inp.hit(KEYS[i])) R.judge(i);
+    // 触屏：点击四轨任意位置判定
+    const geo = R.geo;
+    if (geo && inp.taps && inp.taps.length) {
+      for (let ti = 0; ti < inp.taps.length; ti++) {
+        const tp = inp.taps[ti];
+        if (tp.y < geo.topY - 24) continue;
+        const rel = tp.x - geo.x0;
+        if (rel < 0 || rel > geo.laneW * 4 + geo.gap * 3) continue;
+        const lane = Math.floor(rel / (geo.laneW + geo.gap));
+        if (lane >= 0 && lane < 4) R.judge(lane);
+      }
+    }
     for (let i = 0; i < R.notes.length; i++) {
       const n = R.notes[i];
       if (!n.judged && R.t > n.t + GOOD) { n.judged = 'miss'; R.miss++; R.combo = 0; }
@@ -108,6 +121,7 @@
     const x0 = Math.round((W - totalW) / 2);
     const hitY = 170;
     const topY = 44;
+    R.geo = { x0: x0, laneW: laneW, gap: gap, topY: topY, hitY: hitY };
 
     ART.text(ctx, '节 拍 试 炼', W / 2, 4, { color: '#c9a8ff', align: 'center', scale: 2, shadow: true, shadowColor: '#1a0c2a' });
     ART.text(ctx, 'PERFECT 95% 即可击破层主', W / 2, 36, { color: '#6f7d9a', align: 'center' });
@@ -129,7 +143,7 @@
       px(lx - 2, hitY, laneW + 4, 1, '#d8eaff');
       px(lx + laneW / 2 - 1, hitY + 8, 3, 8, '#2a3a58');
       ART.text(ctx, LABELS[i], lx + laneW / 2, hitY + 20, {
-        color: '#8fa6c9', align: 'center', shadow: true, shadowColor: '#000',
+        color: R.hitT > 0 && R.hitLane === i ? '#ffffff' : '#8fa6c9', align: 'center', shadow: true, shadowColor: '#000',
       });
     }
 
@@ -153,6 +167,9 @@
     px(x0, 196, totalW * Math.min(1, R.t / totalT), 3, '#c9a8ff');
     if (R.combo > 2) {
       ART.text(ctx, R.combo + ' COMBO', W / 2, 130, { color: '#ffe9a8', align: 'center', scale: 2, shadow: true, shadowColor: '#000' });
+    }
+    if (window.G.Input.touchMode) {
+      ART.text(ctx, '点击轨道击打 · 键盘 D F J K', W / 2, 202, { color: '#4f5a75', align: 'center' });
     }
     if (R.flash > 0.01) {
       ctx.fillStyle = 'rgba(200,230,255,' + (R.flash * 0.18) + ')';
