@@ -1,3 +1,4 @@
+.tools/
 shots/
 dist/
 node_modules/
@@ -7,3 +8,5 @@ android/app/src/main/assets/www/
 android/.gradle/
 android/build/
 android/app/build/
+android/local.properties
+android/app/src/main/res/mipmap-*/
