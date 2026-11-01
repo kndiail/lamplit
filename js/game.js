@@ -25,10 +25,17 @@
   let menuScale = 2;
 
   function resize() {
-    const s = Math.min(window.innerWidth / W, window.innerHeight / H);
-    menuScale = Math.max(1, Math.floor(s));
-    canvas.style.width = W * menuScale + 'px';
-    canvas.style.height = H * menuScale + 'px';
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const raw = Math.min(vw / W, vh / H);
+    const touch = G.Input && G.Input.touchMode;
+    // 手机 / 小窗：铺满可视区（允许非整数倍）；桌面大屏保留整数倍保持锐利
+    const s = (touch || raw < 2) ? raw : Math.max(1, Math.floor(raw));
+    menuScale = s;
+    const cw = Math.round(W * s), ch = Math.round(H * s);
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
+    const st = document.getElementById('stage');
+    if (st) { st.style.width = cw + 'px'; st.style.height = ch + 'px'; }
   }
 
   /* =========================================================
@@ -1610,11 +1617,15 @@
     // 冲刺
     P.dashCd = Math.max(0, P.dashCd - dt);
     // 冲刺只保留 Shift / K：空格用于确认与跳过，E 是灯爆
-    if ((Input.hit('shift') || Input.hit('k') || Input.btn.dash) && P.dashCd <= 0 && (dx || dy)) {
+    const wantDash = Input.hit('shift') || Input.hit('k') || Input.btn.dash;
+    if (wantDash && P.dashCd <= 0 && (dx || dy || Input.btn.dash)) {
       P.dashT = 0.17;
       P.dashCd = 1.55;
-      const l = Math.hypot(dx, dy) || 1;
-      P.dashDx = dx / l; P.dashDy = dy / l;
+      // 没有方向输入时（手机上站着按冲刺）按当前朝向冲
+      let ddx = dx, ddy = dy;
+      if (!ddx && !ddy) { ddx = P.fx || 0; ddy = P.fy || 1; }
+      const l = Math.hypot(ddx, ddy) || 1;
+      P.dashDx = ddx / l; P.dashDy = ddy / l;
       AUDIO.sfx('dash');
       if (P.st.relicEmber) {
         hazards.push({ x: P.x, y: P.y, vx: 0, vy: 0, r: 11, dmg: 0, life: 1.5, kind: 'fire', dead: false, t: 0, friend: true, dps: 14 + 5 * ((P.relicLvl || 1) - 1) });
@@ -3872,48 +3883,61 @@
 
   function drawTouchControls() {
     if (!Input.touchMode) return;
-    const jx = Input.touch.active ? Input.touch.ox : 52;
-    const jy = Input.touch.active ? Input.touch.oy : H - 58;
-    ctx.globalAlpha = 0.18;
+    const L = Input.layout();
+
+    // 摇杆：静止在左下角，按下后跟随手指锚点
+    const jx = Input.touch.active ? Input.touch.ox : L.joy.x;
+    const jy = Input.touch.active ? Input.touch.oy : L.joy.y;
+    const jr = L.joy.r;
+    ctx.globalAlpha = 0.14;
     ctx.fillStyle = '#0a1420';
-    ctx.beginPath(); ctx.arc(jx, jy, 25, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 0.32;
+    ctx.beginPath(); ctx.arc(jx, jy, jr, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.30;
     ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(jx, jy, 25, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(jx, jy, jr, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.14;
+    ctx.beginPath(); ctx.arc(jx, jy, jr * 0.55, 0, TAU); ctx.stroke();
     let kx = jx, ky = jy;
     if (Input.touch.active) {
       const dx = Input.touch.x - Input.touch.ox;
       const dy = Input.touch.y - Input.touch.oy;
       const l = Math.hypot(dx, dy) || 1;
-      const cl = Math.min(l, 20);
+      const cl = Math.min(l, jr * 0.75);
       kx = jx + dx / l * cl;
       ky = jy + dy / l * cl;
     }
     ctx.globalAlpha = 0.55;
     ctx.fillStyle = '#9fe8ff';
-    ctx.beginPath(); ctx.arc(kx, ky, 7, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(kx, ky, jr * 0.32, 0, TAU); ctx.fill();
     ctx.globalAlpha = 1;
 
-    const tbtn = (cx, cy, label, ratio, ready) => {
-      ctx.globalAlpha = 0.16;
+    const tbtn = (cx, cy, r, label, ratio, ready) => {
+      ctx.globalAlpha = 0.15;
       ctx.fillStyle = ready ? '#9fe8ff' : '#4a5a72';
-      ctx.beginPath(); ctx.arc(cx, cy, 18, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.55;
       ctx.strokeStyle = ready ? '#d8f4ff' : '#6f7d9a';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(cx, cy, 18, -Math.PI / 2, -Math.PI / 2 + TAU * ratio); ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + TAU * ratio); ctx.stroke();
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
       ctx.globalAlpha = 1;
       ART.text(ctx, label, cx, cy - 5, { color: ready ? '#eaf8ff' : '#8fa6c9', align: 'center' });
     };
-    tbtn(W - 36, H - 54, '冲', clamp(1 - P.dashCd / 1.55, 0, 1), P.dashCd <= 0);
-    tbtn(W - 86, H - 64, '灯', clamp(1 - P.skill.cd / P.skill.max, 0, 1), P.skill.cd <= 0);
+    tbtn(L.skill.x, L.skill.y, L.skill.r, '灯', clamp(1 - P.skill.cd / P.skill.max, 0, 1), P.skill.cd <= 0);
+    tbtn(L.dash.x, L.dash.y, L.dash.r, '冲', clamp(1 - P.dashCd / 1.55, 0, 1), P.dashCd <= 0);
 
-    ctx.globalAlpha = 0.32;
-    ctx.strokeStyle = '#8fa6c9';
+    ctx.globalAlpha = 0.30;
+    ctx.fillStyle = '#0a1420';
+    ctx.beginPath(); ctx.arc(L.pause.x, L.pause.y, L.pause.r, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.62;
+    ctx.strokeStyle = '#9fb6d8';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(16, 36, 12, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(L.pause.x, L.pause.y, L.pause.r, 0, TAU); ctx.stroke();
     ctx.globalAlpha = 1;
-    ART.text(ctx, 'II', 16, 30, { color: '#8fa6c9', align: 'center' });
+    px(L.pause.x - 3, L.pause.y - 4, 2, 8, '#c8d8f0');
+    px(L.pause.x + 1, L.pause.y - 4, 2, 8, '#c8d8f0');
   }
 
   function drawHUD() {
@@ -3931,7 +3955,7 @@
 
     // 生命条
     const hbw = 88;
-    const hx = 8, hy = H - 22;
+    const hx = 8, hy = Input.touchMode ? 34 : H - 22;
     px(hx - 2, hy - 2, hbw + 4, 11, '#04060b');
     px(hx, hy, hbw, 7, '#26141a');
     const hpPct = isFinite(P.hp) && P.maxHp > 0 ? clamp(P.hp / P.maxHp, 0, 1) : 0;
@@ -3957,8 +3981,8 @@
     // 神器（单槽）
     if (P.relics[0]) {
       const rel = RELICS[P.relics[0]];
-      const rlx = Input.touchMode ? 10 : W - 22;
-      const rly = Input.touchMode ? 42 : H - 40;
+      const rlx = Input.touchMode ? W - 14 : W - 22;
+      const rly = Input.touchMode ? 74 : H - 40;
       ctx.drawImage(SPR.icons[rel.icon], rlx, rly);
       for (let k = 0; k < 3; k++) px(rlx + k * 3, rly + 13, 2, 2, k < (P.relicLvl || 1) ? '#ffd166' : '#20263a');
       if (P.relicStore && P.relicStore.length) {
@@ -3993,7 +4017,11 @@
     drawMinimap();
     const mm = Math.floor(runTime / 60).toString().padStart(2, '0');
     const ss = Math.floor(runTime % 60).toString().padStart(2, '0');
-    ART.text(ctx, mm + ':' + ss, 8, 20, { color: '#4f5a75', shadow: true, shadowColor: '#000' });
+    if (Input.touchMode) {
+      ART.text(ctx, mm + ':' + ss, 8, 19, { color: '#4f5a75', shadow: true, shadowColor: '#000' });
+    } else {
+      ART.text(ctx, mm + ':' + ss, 8, 20, { color: '#4f5a75', shadow: true, shadowColor: '#000' });
+    }
     if (room) {
       const left = roomAlive();
       ART.text(ctx, roomCleared ? '通道已开' : '剩余 ' + left, W - 8, 20, {
@@ -4995,6 +5023,7 @@
      ========================================================= */
   function boot() {
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
     window.addEventListener('blur', () => {
       if (state === 'PLAY') { state = 'PAUSE'; }
     });

@@ -61,6 +61,10 @@
     anyKey: false,
 
     init(canvas) {
+      this.cw = canvas.width;
+      this.ch = canvas.height;
+      // 触屏设备（含 Android WebView）一开始就切到触屏 UI
+      if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) this.touchMode = true;
       window.addEventListener('keydown', (e) => {
         const k = e.key.toLowerCase();
         if (!this.keys[k]) this.pressed[k] = true;
@@ -102,6 +106,7 @@
       };
       canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        const L = this.layout();
         for (let i = 0; i < e.changedTouches.length; i++) {
           const t = e.changedTouches[i];
           const p = toCanvas(t.clientX, t.clientY);
@@ -110,9 +115,9 @@
           this.taps.push({ x: p.x, y: p.y });
           this.mouse.x = p.x; this.mouse.y = p.y;
           this.mouse.clicked = true;
-          if (inCircle(p.x, p.y, W - 36, H - 54, 25)) { this.btn.dash = true; continue; }
-          if (inCircle(p.x, p.y, W - 86, H - 64, 25)) { this.btn.skill = true; continue; }
-          if (inCircle(p.x, p.y, 16, 36, 17)) { this.btn.pause = true; continue; }
+          if (inCircle(p.x, p.y, L.pause.x, L.pause.y, L.pause.r + 7)) { this.btn.pause = true; continue; }
+          if (inCircle(p.x, p.y, L.dash.x, L.dash.y, L.dash.r + 8)) { this.btn.dash = true; continue; }
+          if (inCircle(p.x, p.y, L.skill.x, L.skill.y, L.skill.r + 8)) { this.btn.skill = true; continue; }
           if (p.x < W * 0.5 && !this.touch.active) {
             this.touch.active = true;
             this.touch.id = t.identifier;
@@ -145,6 +150,18 @@
       };
       canvas.addEventListener('touchend', endTouch, { passive: false });
       canvas.addEventListener('touchcancel', endTouch, { passive: false });
+    },
+
+    // 触屏控件布局：左下摇杆 / 右下双键 / 底部中间暂停
+    layout() {
+      const w = this.cw || 384, h = this.ch || 216;
+      const jr = 28, br = 26;
+      return {
+        joy: { x: jr + 30, y: h - jr - 24, r: jr },
+        dash: { x: w - br - 8, y: h - br - 26, r: br },
+        skill: { x: w - br * 3 - 16, y: h - br - 26, r: br },
+        pause: { x: 15, y: 106, r: 10 },
+      };
     },
 
     down(...keys) { return keys.some((k) => !!this.keys[k]); },

@@ -35,6 +35,7 @@ body {
   position: relative;
   touch-action: none;
   line-height: 0;
+  overflow: hidden;
   box-shadow:
     0 0 0 2px #171b2b,
     0 0 40px 6px rgba(255, 176, 74, 0.10),
