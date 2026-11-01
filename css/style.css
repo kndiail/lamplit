@@ -1,0 +1,128 @@
+@font-face {
+  font-family: "Zpix";
+  src: url("../assets/fonts/zpix.woff2") format("woff2");
+  font-display: block;
+  font-weight: normal;
+  font-style: normal;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05060c;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Zpix", monospace;
+  color: #cfd6e6;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: default;
+  background:
+    radial-gradient(ellipse at 50% 45%, #10131f 0%, #05060c 70%);
+}
+
+#stage {
+  position: relative;
+  line-height: 0;
+  box-shadow:
+    0 0 0 2px #171b2b,
+    0 0 40px 6px rgba(255, 176, 74, 0.10),
+    0 24px 60px rgba(0, 0, 0, 0.75);
+}
+
+canvas#game {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  background: #05060c;
+  touch-action: none;
+}
+
+/* 轻微扫描线，强化 CRT 像素感 */
+#scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 1px,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(0, 0, 0, 0) 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+#vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(0, 0, 0, 0) 45%,
+    rgba(0, 0, 0, 0.35) 78%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+
+/* 启动遮罩 */
+#boot {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05060c;
+  z-index: 20;
+  transition: opacity 420ms ease;
+}
+#boot.hide { opacity: 0; pointer-events: none; }
+
+.boot-inner { text-align: center; }
+.boot-logo {
+  font-size: 36px;
+  letter-spacing: 6px;
+  color: #ffc36b;
+  text-shadow: 0 0 14px rgba(255, 170, 60, 0.5);
+}
+.boot-sub {
+  margin-top: 10px;
+  font-size: 12px;
+  letter-spacing: 8px;
+  color: #6e7893;
+}
+.boot-bar {
+  width: 220px;
+  height: 6px;
+  margin: 22px auto 0;
+  border: 2px solid #2a3149;
+  background: #0b0e18;
+  overflow: hidden;
+}
+.boot-bar i {
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #ffb347, #ffe6a8);
+  animation: load 1.1s ease-in-out infinite;
+}
+@keyframes load {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(260%); }
+}
+.boot-tip {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #4c5570;
+  letter-spacing: 2px;
+}
