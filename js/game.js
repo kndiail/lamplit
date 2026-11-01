@@ -687,7 +687,11 @@
     dropHeart(cx, cy);
     for (let i = 0; i < 3; i++) dropXp(cx + rand(-24, 24), cy + rand(-16, 16), 3);
     whiteFlash = Math.max(whiteFlash, 0.3);
-    for (let i = 0; i < pickups.length; i++) pickups[i].magnet = true;
+    // 先让掉落物在地上停 0.5 秒，再自动吸附
+    for (let i = 0; i < pickups.length; i++) {
+      pickups[i].magnet = false;
+      pickups[i].magnetT = 0.5;
+    }
     addEffect({ kind: 'ring', x: cx, y: cy, r0: 8, r1: 120, max: 0.75, life: 0.75, color: 'rgba(255,225,170,0.5)' });
     for (let i = 0; i < 18; i++) {
       spawnParticle(cx, cy, rand(-90, 90), rand(-90, 90), rand(0.4, 1), '#ffe9a8', 1.8, 0.6, true);
@@ -2096,6 +2100,10 @@
       p.t += dt;
       p.life -= dt;
       if (p.life <= 0) { p.dead = true; continue; }
+      if (p.magnetT > 0) {
+        p.magnetT -= dt;
+        if (p.magnetT <= 0) { p.magnetT = 0; p.magnet = true; }
+      }
       if (p.magnet) p.life = Math.max(p.life, 1.5);
       const d = dist(P.x, P.y, p.x, p.y);
       const pr = p.magnet ? 4096 : (p.kind === 'heart' ? 22 : P.st.pickup);
@@ -4215,7 +4223,8 @@
     ctx.fillStyle = 'rgba(4,6,12,0.95)';
     ctx.fillRect(0, 0, W, H);
     ART.text(ctx, '图 鉴', 12, 4, { color: '#ffdca0', scale: 2 });
-    ART.text(ctx, 'Q/E 切页　方向键 选择　ESC 返回', W - 12, 8, { color: '#4f5a75', align: 'right' });
+    ART.text(ctx, 'Q/E 切页　方向键 选择', W - 70, 8, { color: '#4f5a75', align: 'right' });
+    drawBackBtn('返回');
     ART.text(ctx, '成就 ' + META.achCount(save) + '/' + META.ACHIEVEMENTS.length, W - 12, 24,
       { color: '#6f7d9a', align: 'right' });
 
@@ -4390,6 +4399,17 @@
     start: { x: 34, y: 178, w: 148, h: 22 },
     back: { x: 202, y: 178, w: 148, h: 22 },
   };
+  // 顶栏返回键（触屏没有 ESC 时也能退出）
+  const BACK_BTN = { x: 384 - 60, y: 4, w: 52, h: 16 };
+
+  function drawBackBtn(label) {
+    const hov = inRect(Input.mouse.x, Input.mouse.y, BACK_BTN);
+    const b = BACK_BTN;
+    panel(b.x, b.y, b.w, b.h, hov ? '#2a3320' : '#12161f', hov ? '#9fe08a' : '#2f3852', '#05070d');
+    ART.text(ctx, label || '返回', b.x + b.w / 2, b.y + 2, {
+      color: hov ? '#d8ffcf' : '#9fd8a8', align: 'center',
+    });
+  }
 
   function openDaily() {
     dailyPreview = META.dailyConfig();
@@ -4433,6 +4453,7 @@
     panel(DAILY_BTN.back.x, DAILY_BTN.back.y, DAILY_BTN.back.w, DAILY_BTN.back.h,
       hb ? '#222b40' : '#12161f', hb ? '#ffd166' : '#2f3852');
     ART.text(ctx, '返回（ESC）', DAILY_BTN.back.x + 14, DAILY_BTN.back.y + 3, { color: hb ? '#ffe9a8' : '#cfd8ea' });
+    drawBackBtn('返回');
   }
 
   /* =========================================================
@@ -4867,6 +4888,10 @@
 
     if (state === 'CODEX') {
       if (Input.hit('escape') || Input.hit('c')) { state = 'TITLE'; AUDIO.sfx('click'); return; }
+      if (Input.mouse.clicked && inRect(Input.mouse.x, Input.mouse.y, BACK_BTN)) {
+        state = 'TITLE'; AUDIO.sfx('click'); return;
+      }
+      if (Input.btn.pause) { state = 'TITLE'; AUDIO.sfx('click'); return; }
       const tabs = 5;
       if (Input.hit('q') || Input.hit('arrowup')) {
         codexTab = (codexTab + tabs - 1) % tabs; codexSel = 0; AUDIO.sfx('hover');
@@ -4901,6 +4926,10 @@
         (Input.mouse.clicked && inRect(Input.mouse.x, Input.mouse.y, DAILY_BTN.start));
       const backIt = Input.mouse.clicked && inRect(Input.mouse.x, Input.mouse.y, DAILY_BTN.back);
       if (backIt) { state = 'TITLE'; AUDIO.sfx('click'); return; }
+      if (Input.mouse.clicked && inRect(Input.mouse.x, Input.mouse.y, BACK_BTN)) {
+        state = 'TITLE'; AUDIO.sfx('click'); return;
+      }
+      if (Input.btn.pause) { state = 'TITLE'; AUDIO.sfx('click'); return; }
       if (startIt) {
         const cfg = dailyPreview || META.dailyConfig();
         startRun(cfg.char, { daily: cfg });
